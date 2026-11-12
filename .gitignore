@@ -9,3 +9,6 @@ obj/
 
 # macOS metadata
 .DS_Store
+
+# Private learning notes for mentoring and future README preparation
+/LEARNING_LOG.md
