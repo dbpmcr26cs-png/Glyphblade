@@ -1,6 +1,8 @@
 ﻿// Game window boundaries - 24x14
 using System.Net;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.VisualBasic;
 
 const int width = 23; //20
@@ -11,10 +13,15 @@ int player_x = 11;
 int player_y = 6;
 
 
-Console.Clear();
-drawWallBoundaries(width, height);
-Console.SetCursorPosition(player_x, player_y);
-Console.Write('@');
+// Clears screen then draws boundaries and draws player
+void drawGame(int x, int y)
+{
+    Console.Clear();
+    drawWallBoundaries(width, height);
+    Console.SetCursorPosition(x, y);
+    Console.Write('@');
+}
+;
 
 // Draw walls for room bounday
 //  - eventually will need to create doors for player to go through
@@ -70,10 +77,6 @@ static bool boundaryCheck(int width, int height, int player_x, int player_y)
     {
         y = boundaryCheck(width, height, x, (y - 1)) ? (y - 1) : y;
     }
-    Console.Clear();
-    drawWallBoundaries(width, height);
-    Console.SetCursorPosition(x, y);
-    Console.Write('@');
     return (x, y);
 }
 
@@ -81,22 +84,26 @@ static bool boundaryCheck(int width, int height, int player_x, int player_y)
 // Main Game Loop
 void main(int player_x, int player_y, int width, int height)
 {
+    // Hides flashing cursor during gameplay
+    Console.CursorVisible = false;
+
     while (true)
     {
-        // Hides lashign cursor during gameplay
-        Console.CursorVisible = false;
-
-        ConsoleKey input = Console.ReadKey(true).Key;
-
-        // This is for breaking out of program when debugging
-        if (input == ConsoleKey.Enter)
+        if (Console.KeyAvailable)
         {
-            Console.CursorVisible = true;
-            break;
-        }
-        
-        (player_x, player_y) = updatePlayerPosition(player_x, player_y, input);
+            ConsoleKey input = Console.ReadKey(true).Key;
 
+            // This is for breaking out of program when debugging
+            if (input == ConsoleKey.Enter)
+            {
+                Console.CursorVisible = true;
+                Console.Clear();
+                break;
+            }
+
+            (player_x, player_y) = updatePlayerPosition(player_x, player_y, input);
+            drawGame(player_x, player_y);
+        }
     }
 }
 
