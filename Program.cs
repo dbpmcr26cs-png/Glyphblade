@@ -20,7 +20,7 @@ int player_y = 6;
 
 
 // Clears screen then draws boundaries and draws player
-void drawGame(int x, int y, Direction playerFaces, bool isAttacking)
+void drawGame(int x, int y, Direction playerFaces, bool isAttacking, long attackElapsedMs)
 {
     Console.Clear();
     drawWallBoundaries(width, height);
@@ -28,34 +28,66 @@ void drawGame(int x, int y, Direction playerFaces, bool isAttacking)
     Console.Write('@');
     if (isAttacking)
     {
-        drawSword(playerFaces, x, y);
+        drawSword(playerFaces, x, y, attackElapsedMs);
     }
     Console.SetCursorPosition(4, height + 1);
     Console.Write($"{playerFaces}");
 }
 
 // Sword Animations
-void drawSword(Direction playerFaces, int x, int y)
+void drawSword(Direction playerFaces, int x, int y, long attackElapsedMs)
 {
     if (playerFaces == Direction.North && (boundaryCheck(width, height, x, y - 1)))
     {
-        Console.SetCursorPosition(x * horizScale, y - 1);
-        Console.Write("┃");
+        if (attackElapsedMs < 100L)
+        {
+            Console.SetCursorPosition(x * horizScale, y - 1);
+            Console.Write("╱");
+        }
+        else if (attackElapsedMs >= 100L && attackElapsedMs < 200L)
+        {
+            Console.SetCursorPosition(x * horizScale, y - 1);
+            Console.Write("┃");
+        }
     }
     else if (playerFaces == Direction.South && (boundaryCheck(width, height, x, y + 1)))
     {
-        Console.SetCursorPosition(x * horizScale, y + 1);
-        Console.Write("┃");
+        if (attackElapsedMs < 100L)
+        {
+            Console.SetCursorPosition(x * horizScale, y + 1);
+            Console.Write("╲");
+        }
+        else if (attackElapsedMs >= 100L && attackElapsedMs < 200L)
+        {
+            Console.SetCursorPosition(x * horizScale, y + 1);
+            Console.Write("┃");
+        }
     }
     else if (playerFaces == Direction.East && (boundaryCheck(width, height, x + 1, y)))
     {
-        Console.SetCursorPosition((x * horizScale) + 1, y);
-        Console.Write("━━");
+        if (attackElapsedMs < 100L && (boundaryCheck(width, height, x, y - 1)))
+        {
+            Console.SetCursorPosition((x * horizScale) + 1, y - 1);
+            Console.Write("╱");
+        }
+        else if (attackElapsedMs >= 100L && attackElapsedMs < 200L)
+        {
+            Console.SetCursorPosition((x * horizScale) + 1, y);
+            Console.Write("━━");
+        }
     }
     else if (playerFaces == Direction.West && (boundaryCheck(width, height, x - 1, y)))
     {
-        Console.SetCursorPosition((x * horizScale) - 2, y);
-        Console.Write("━━");
+        if (attackElapsedMs < 100L && (boundaryCheck(width, height, x, y - 1)))
+        {
+            Console.SetCursorPosition((x * horizScale) - 1, y - 1);
+            Console.Write("╲");
+        }
+        else if (attackElapsedMs >= 100L && attackElapsedMs < 200L)
+        {
+            Console.SetCursorPosition((x * horizScale) - 2, y);
+            Console.Write("━━");
+        }
     }
 }
 
@@ -132,13 +164,15 @@ void main(int player_x, int player_y, int width, int height)
     // Is player currently attacking - for sword effect and damage
     bool isAttacking = false;
 
-    drawGame(player_x, player_y, playerFaces, isAttacking);
 
     //Game loop internal clock
     Stopwatch timeElapsed = Stopwatch.StartNew();
     //Event timekeepers
     long timeLastUpdated = 0L; //Stores the last updated time value for comparison
     long attackStartedAt = -attackCooldownMs; //Start of player attack
+    long attackElapsedMs = 0L; //Elapsed time since start of player attack
+
+    drawGame(player_x, player_y, playerFaces, isAttacking, attackElapsedMs);
 
     while (true)
     {
@@ -152,10 +186,11 @@ void main(int player_x, int player_y, int width, int height)
         {
             ConsoleKey input = Console.ReadKey(true).Key;
 
-
+            // Being attack after 400ms cooldown for the attack (& not already mid-attack)
             if (input == ConsoleKey.Spacebar && !isAttacking
                 && timeElapsed.ElapsedMilliseconds - attackStartedAt >= attackCooldownMs)
             {
+                // Set attack to true and begin counting start of attack
                 isAttacking = true;
                 attackStartedAt = timeElapsed.ElapsedMilliseconds;
             }
@@ -173,7 +208,8 @@ void main(int player_x, int player_y, int width, int height)
 
         if (timeElapsed.ElapsedMilliseconds - timeLastUpdated >= drawIntervalMs)
         {
-            drawGame(player_x, player_y, playerFaces, isAttacking);
+            attackElapsedMs = timeElapsed.ElapsedMilliseconds - attackStartedAt;
+            drawGame(player_x, player_y, playerFaces, isAttacking, attackElapsedMs);
             timeLastUpdated = timeElapsed.ElapsedMilliseconds;
         }
         Thread.Sleep(1);
