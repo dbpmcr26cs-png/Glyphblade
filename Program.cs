@@ -7,6 +7,7 @@ const int height = 13; //12
 // Timed Events
 const long drawIntervalMs = 100L; //Screen redraw rate
 const long attackDurationMs = 200L; //Sword Attack
+const long swordFrameDurationMs = attackDurationMs / 2; //Duration of first half of sword attack animation
 const long attackCooldownMs = 400L; //Cooldown between sword attacks
 
 const int horizScale = 2; //This controls horizontal movement scaling (corrects horiz if 2)
@@ -18,12 +19,18 @@ const int horizScale = 2; //This controls horizontal movement scaling (corrects 
 int player_x = 11;
 int player_y = 6;
 
-
 // Clears screen then draws boundaries and draws player
-void drawGame(int x, int y, Direction playerFaces, bool isAttacking, long attackElapsedMs)
+void drawGame(int x, int y, Direction playerFaces, bool isAttacking, long attackElapsedMs, int enemy_x, int enemy_y, int enemyHealth)
 {
     Console.Clear();
     drawWallBoundaries(width, height);
+
+    if (enemyHealth > 0)
+    {
+        Console.SetCursorPosition(enemy_x * horizScale, enemy_y);
+        Console.Write("&");
+    }
+
     Console.SetCursorPosition(x * horizScale, y);
     Console.Write('@');
     if (isAttacking)
@@ -32,6 +39,8 @@ void drawGame(int x, int y, Direction playerFaces, bool isAttacking, long attack
     }
     Console.SetCursorPosition(4, height + 1);
     Console.Write($"{playerFaces}");
+    Console.SetCursorPosition(15, height + 1);
+    Console.Write($"Enemy Health: {enemyHealth}");
 }
 
 // Sword Animations
@@ -39,12 +48,12 @@ void drawSword(Direction playerFaces, int x, int y, long attackElapsedMs)
 {
     if (playerFaces == Direction.North && (boundaryCheck(width, height, x, y - 1)))
     {
-        if (attackElapsedMs < 100L)
+        if (attackElapsedMs < swordFrameDurationMs)
         {
             Console.SetCursorPosition(x * horizScale, y - 1);
             Console.Write("╱");
         }
-        else if (attackElapsedMs >= 100L && attackElapsedMs < 200L)
+        else if (attackElapsedMs >= swordFrameDurationMs && attackElapsedMs < attackDurationMs)
         {
             Console.SetCursorPosition(x * horizScale, y - 1);
             Console.Write("┃");
@@ -52,12 +61,12 @@ void drawSword(Direction playerFaces, int x, int y, long attackElapsedMs)
     }
     else if (playerFaces == Direction.South && (boundaryCheck(width, height, x, y + 1)))
     {
-        if (attackElapsedMs < 100L)
+        if (attackElapsedMs < swordFrameDurationMs)
         {
             Console.SetCursorPosition(x * horizScale, y + 1);
             Console.Write("╲");
         }
-        else if (attackElapsedMs >= 100L && attackElapsedMs < 200L)
+        else if (attackElapsedMs >= swordFrameDurationMs && attackElapsedMs < attackDurationMs)
         {
             Console.SetCursorPosition(x * horizScale, y + 1);
             Console.Write("┃");
@@ -65,12 +74,12 @@ void drawSword(Direction playerFaces, int x, int y, long attackElapsedMs)
     }
     else if (playerFaces == Direction.East && (boundaryCheck(width, height, x + 1, y)))
     {
-        if (attackElapsedMs < 100L && (boundaryCheck(width, height, x, y - 1)))
+        if (attackElapsedMs < swordFrameDurationMs && (boundaryCheck(width, height, x, y - 1)))
         {
             Console.SetCursorPosition((x * horizScale) + 1, y - 1);
             Console.Write("╱");
         }
-        else if (attackElapsedMs >= 100L && attackElapsedMs < 200L)
+        else if (attackElapsedMs >= swordFrameDurationMs && attackElapsedMs < attackDurationMs)
         {
             Console.SetCursorPosition((x * horizScale) + 1, y);
             Console.Write("━━");
@@ -78,12 +87,12 @@ void drawSword(Direction playerFaces, int x, int y, long attackElapsedMs)
     }
     else if (playerFaces == Direction.West && (boundaryCheck(width, height, x - 1, y)))
     {
-        if (attackElapsedMs < 100L && (boundaryCheck(width, height, x, y - 1)))
+        if (attackElapsedMs < swordFrameDurationMs && (boundaryCheck(width, height, x, y - 1)))
         {
             Console.SetCursorPosition((x * horizScale) - 1, y - 1);
             Console.Write("╲");
         }
-        else if (attackElapsedMs >= 100L && attackElapsedMs < 200L)
+        else if (attackElapsedMs >= swordFrameDurationMs && attackElapsedMs < attackDurationMs)
         {
             Console.SetCursorPosition((x * horizScale) - 2, y);
             Console.Write("━━");
@@ -164,6 +173,10 @@ void main(int player_x, int player_y, int width, int height)
     // Is player currently attacking - for sword effect and damage
     bool isAttacking = false;
 
+    // Enemy starting point - for testing
+    int enemy_x = 18;
+    int enemy_y = 3;
+    int enemyHealth = 3;
 
     //Game loop internal clock
     Stopwatch timeElapsed = Stopwatch.StartNew();
@@ -172,7 +185,7 @@ void main(int player_x, int player_y, int width, int height)
     long attackStartedAt = -attackCooldownMs; //Start of player attack
     long attackElapsedMs = 0L; //Elapsed time since start of player attack
 
-    drawGame(player_x, player_y, playerFaces, isAttacking, attackElapsedMs);
+    drawGame(player_x, player_y, playerFaces, isAttacking, attackElapsedMs, enemy_x, enemy_y, enemyHealth);
 
     while (true)
     {
@@ -193,6 +206,30 @@ void main(int player_x, int player_y, int width, int height)
                 // Set attack to true and begin counting start of attack
                 isAttacking = true;
                 attackStartedAt = timeElapsed.ElapsedMilliseconds;
+
+                int targetX = player_x;
+                int targetY = player_y;
+                if (playerFaces == Direction.North)
+                {
+                    targetY--;
+                }
+                else if (playerFaces == Direction.South)
+                {
+                    targetY++;
+                }
+                else if (playerFaces == Direction.East)
+                {
+                    targetX++;
+                }
+                else if (playerFaces == Direction.West)
+                {
+                    targetX--;
+                }
+
+                if (targetX == enemy_x && targetY == enemy_y && enemyHealth > 0)
+                {
+                    enemyHealth--;
+                }
             }
 
             // This is for breaking out of program when debugging
@@ -209,7 +246,7 @@ void main(int player_x, int player_y, int width, int height)
         if (timeElapsed.ElapsedMilliseconds - timeLastUpdated >= drawIntervalMs)
         {
             attackElapsedMs = timeElapsed.ElapsedMilliseconds - attackStartedAt;
-            drawGame(player_x, player_y, playerFaces, isAttacking, attackElapsedMs);
+            drawGame(player_x, player_y, playerFaces, isAttacking, attackElapsedMs, enemy_x, enemy_y, enemyHealth);
             timeLastUpdated = timeElapsed.ElapsedMilliseconds;
         }
         Thread.Sleep(1);
