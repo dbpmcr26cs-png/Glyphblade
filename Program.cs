@@ -20,14 +20,14 @@ int player_x = 11;
 int player_y = 6;
 
 // Clears screen then draws boundaries and draws player
-void drawGame(int x, int y, Direction playerFaces, bool isAttacking, long attackElapsedMs, int enemy_x, int enemy_y, int enemyHealth)
+void drawGame(int x, int y, Direction playerFaces, bool isAttacking, long attackElapsedMs, Enemy enemy)
 {
     Console.Clear();
     drawWallBoundaries(width, height);
 
-    if (enemyHealth > 0)
+    if (enemy.Health > 0)
     {
-        Console.SetCursorPosition(enemy_x * horizScale, enemy_y);
+        Console.SetCursorPosition(enemy.X * horizScale, enemy.Y);
         Console.Write("&");
     }
 
@@ -40,7 +40,7 @@ void drawGame(int x, int y, Direction playerFaces, bool isAttacking, long attack
     Console.SetCursorPosition(4, height + 1);
     Console.Write($"{playerFaces}");
     Console.SetCursorPosition(15, height + 1);
-    Console.Write($"Enemy Health: {enemyHealth}");
+    Console.Write($"Enemy Health: {enemy.Health}");
 }
 
 // Sword Animations
@@ -173,10 +173,8 @@ void main(int player_x, int player_y, int width, int height)
     // Is player currently attacking - for sword effect and damage
     bool isAttacking = false;
 
-    // Enemy starting point - for testing
-    int enemy_x = 18;
-    int enemy_y = 3;
-    int enemyHealth = 3;
+    // Enemy
+    Enemy enemy = new Enemy(18, 3, 3);
 
     //Game loop internal clock
     Stopwatch timeElapsed = Stopwatch.StartNew();
@@ -185,7 +183,7 @@ void main(int player_x, int player_y, int width, int height)
     long attackStartedAt = -attackCooldownMs; //Start of player attack
     long attackElapsedMs = 0L; //Elapsed time since start of player attack
 
-    drawGame(player_x, player_y, playerFaces, isAttacking, attackElapsedMs, enemy_x, enemy_y, enemyHealth);
+    drawGame(player_x, player_y, playerFaces, isAttacking, attackElapsedMs, enemy);
 
     while (true)
     {
@@ -226,9 +224,9 @@ void main(int player_x, int player_y, int width, int height)
                     targetX--;
                 }
 
-                if (targetX == enemy_x && targetY == enemy_y && enemyHealth > 0)
+                if (targetX == enemy.X && targetY == enemy.Y && enemy.Health > 0)
                 {
-                    enemyHealth--;
+                    enemy.Health--;
                 }
             }
 
@@ -246,7 +244,7 @@ void main(int player_x, int player_y, int width, int height)
         if (timeElapsed.ElapsedMilliseconds - timeLastUpdated >= drawIntervalMs)
         {
             attackElapsedMs = timeElapsed.ElapsedMilliseconds - attackStartedAt;
-            drawGame(player_x, player_y, playerFaces, isAttacking, attackElapsedMs, enemy_x, enemy_y, enemyHealth);
+            drawGame(player_x, player_y, playerFaces, isAttacking, attackElapsedMs, enemy);
             timeLastUpdated = timeElapsed.ElapsedMilliseconds;
         }
         Thread.Sleep(1);
