@@ -226,7 +226,7 @@ void main(int player_x, int player_y, int width, int height)
 
                 if (targetX == enemy.X && targetY == enemy.Y && enemy.Health > 0)
                 {
-                    enemy.Health--;
+                    enemy.TakeDamage(1);
                 }
             }
 

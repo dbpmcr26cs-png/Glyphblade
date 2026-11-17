@@ -2,7 +2,7 @@ public class Enemy
 {
     public int X { get; set; }
     public int Y { get; set; }
-    public int Health { get; set; }
+    public int Health { get; private set; }
 
     public Enemy(int x, int y, int health)
     {
@@ -12,6 +12,7 @@ public class Enemy
     }
     public void TakeDamage(int amount)
     {
-        
+        //Reduce health by amount, make 0 lower limit
+        Health = ((Health - amount) > 0) ? (Health - amount) : 0;
     }
 }
