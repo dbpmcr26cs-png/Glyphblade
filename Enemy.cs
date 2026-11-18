@@ -15,4 +15,8 @@ public class Enemy
         //Reduce health by amount, make 0 lower limit
         Health = ((Health - amount) > 0) ? (Health - amount) : 0;
     }
+    public bool IsAlive
+    {
+        get { return Health > 0; }
+    }
 }

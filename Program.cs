@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Reflection.Metadata;
 
 // Game window boundaries - 24x14
 const int width = 23; //20
@@ -25,7 +26,7 @@ void drawGame(int x, int y, Direction playerFaces, bool isAttacking, long attack
     Console.Clear();
     drawWallBoundaries(width, height);
 
-    if (enemy.Health > 0)
+    if (enemy.IsAlive)
     {
         Console.SetCursorPosition(enemy.X * horizScale, enemy.Y);
         Console.Write("&");
@@ -136,26 +137,42 @@ static bool boundaryCheck(int width, int height, int player_x, int player_y)
 }
 
 // Controls player movement within the game console
-(int x, int y, Direction playerFaces) updatePlayerPosition(int x, int y, ConsoleKey input, Direction playerFaces)
+(int x, int y, Direction playerFaces) updatePlayerPosition(int x, int y, ConsoleKey input, Direction playerFaces, Enemy enemy)
 {
     if (input == ConsoleKey.RightArrow)
     {
-        x = boundaryCheck(width, height, (x + 1), y) ? (x + 1) : x;
+        bool blockedByEnemy = enemy.IsAlive && x + 1 == enemy.X && y == enemy.Y;
+        if (!blockedByEnemy)
+        {
+            x = boundaryCheck(width, height, (x + 1), y) ? (x + 1) : x;
+        }
         playerFaces = Direction.East;
     }
     if (input == ConsoleKey.LeftArrow)
     {
-        x = boundaryCheck(width, height, (x - 1), y) ? (x - 1) : x;
+        bool blockedByEnemy = enemy.IsAlive && x - 1 == enemy.X && y == enemy.Y;
+        if (!blockedByEnemy)
+        {
+            x = boundaryCheck(width, height, (x - 1), y) ? (x - 1) : x;
+        }
         playerFaces = Direction.West;
     }
     if (input == ConsoleKey.DownArrow)
     {
-        y = boundaryCheck(width, height, x, (y + 1)) ? (y + 1) : y;
+        bool blockedByEnemy = enemy.IsAlive && x == enemy.X && y + 1 == enemy.Y;
+        if (!blockedByEnemy)
+        {
+            y = boundaryCheck(width, height, x, (y + 1)) ? (y + 1) : y;
+        }
         playerFaces = Direction.South;
     }
     if (input == ConsoleKey.UpArrow)
     {
-        y = boundaryCheck(width, height, x, (y - 1)) ? (y - 1) : y;
+        bool blockedByEnemy = enemy.IsAlive && x == enemy.X && y - 1 == enemy.Y;
+        if (!blockedByEnemy)
+        {
+            y = boundaryCheck(width, height, x, (y - 1)) ? (y - 1) : y;
+        }
         playerFaces = Direction.North;
     }
     return (x, y, playerFaces);
@@ -224,7 +241,7 @@ void main(int player_x, int player_y, int width, int height)
                     targetX--;
                 }
 
-                if (targetX == enemy.X && targetY == enemy.Y && enemy.Health > 0)
+                if (targetX == enemy.X && targetY == enemy.Y && enemy.IsAlive)
                 {
                     enemy.TakeDamage(1);
                 }
@@ -238,7 +255,7 @@ void main(int player_x, int player_y, int width, int height)
                 break;
             }
 
-            (player_x, player_y, playerFaces) = updatePlayerPosition(player_x, player_y, input, playerFaces);
+            (player_x, player_y, playerFaces) = updatePlayerPosition(player_x, player_y, input, playerFaces, enemy);
         }
 
         if (timeElapsed.ElapsedMilliseconds - timeLastUpdated >= drawIntervalMs)
