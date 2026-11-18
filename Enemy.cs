@@ -3,6 +3,9 @@ public class Enemy
     public int X { get; set; }
     public int Y { get; set; }
     public int Health { get; private set; }
+    public long LastMovedAt { get; set; } = 0L;
+    public int PatrolStepX { get; set; } = 1;
+    // public int PatrolStepY { get; set; } = 1;
 
     public Enemy(int x, int y, int health)
     {

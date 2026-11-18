@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Threading.Channels;
 
 // Game window boundaries - 24x14
 const int width = 23; //20
@@ -10,6 +9,7 @@ const long drawIntervalMs = 100L; //Screen redraw rate
 const long attackDurationMs = 200L; //Sword Attack
 const long swordFrameDurationMs = attackDurationMs / 2; //Duration of first half of sword attack animation
 const long attackCooldownMs = 400L; //Cooldown between sword attacks
+const long enemyMoveIntervalMs = 500L; //Time between enemy patrolling moves
 
 const int horizScale = 2; //This controls horizontal movement scaling (corrects horiz if 2)
 // 2 gives each tile two terminal columns.
@@ -43,11 +43,11 @@ void drawGame(int x, int y, Direction playerFaces, bool isAttacking, long attack
     }
     Console.SetCursorPosition(4, height + 1);
     Console.Write($"{playerFaces}");
-    
+
     for (int i = 0; i < enemies.Count; i++)
     {
-        Console.SetCursorPosition(15, height + (i+1));
-        Console.Write($"Enemy {i+1} Health: {enemies[i].Health}");
+        Console.SetCursorPosition(15, height + (i + 1));
+        Console.Write($"Enemy {i + 1} Health: {enemies[i].Health}");
     }
 }
 
@@ -231,6 +231,25 @@ void main(int player_x, int player_y, int width, int height)
             (timeElapsed.ElapsedMilliseconds - attackStartedAt >= attackDurationMs))
         {
             isAttacking = false;
+        }
+
+        // Each enemy patrols back and forth across the room
+        foreach (Enemy enemy in enemies)
+        {
+            if (enemy.IsAlive &&
+                (timeElapsed.ElapsedMilliseconds - enemy.LastMovedAt >= enemyMoveIntervalMs))
+            {
+                int nextX = enemy.X + enemy.PatrolStepX;
+                if (boundaryCheck(width, height, nextX, enemy.Y) && !(nextX == player_x && enemy.Y == player_y) && !IsOccupiedByEnemy(nextX, enemy.Y, enemies))
+                {
+                    enemy.X = nextX;
+                }
+                else
+                {
+                    enemy.PatrolStepX *= -1;
+                }
+                enemy.LastMovedAt = timeElapsed.ElapsedMilliseconds;
+            }
         }
 
         if (Console.KeyAvailable)
