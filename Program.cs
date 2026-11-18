@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics;
-using System.Reflection.Metadata;
+using System.Threading.Channels;
 
 // Game window boundaries - 24x14
 const int width = 23; //20
@@ -21,15 +21,18 @@ int player_x = 11;
 int player_y = 6;
 
 // Clears screen then draws boundaries and draws player
-void drawGame(int x, int y, Direction playerFaces, bool isAttacking, long attackElapsedMs, Enemy enemy)
+void drawGame(int x, int y, Direction playerFaces, bool isAttacking, long attackElapsedMs, List<Enemy> enemies)
 {
     Console.Clear();
     drawWallBoundaries(width, height);
 
-    if (enemy.IsAlive)
+    foreach (Enemy enemy in enemies)
     {
-        Console.SetCursorPosition(enemy.X * horizScale, enemy.Y);
-        Console.Write("&");
+        if (enemy.IsAlive)
+        {
+            Console.SetCursorPosition(enemy.X * horizScale, enemy.Y);
+            Console.Write("&");
+        }
     }
 
     Console.SetCursorPosition(x * horizScale, y);
@@ -40,8 +43,12 @@ void drawGame(int x, int y, Direction playerFaces, bool isAttacking, long attack
     }
     Console.SetCursorPosition(4, height + 1);
     Console.Write($"{playerFaces}");
-    Console.SetCursorPosition(15, height + 1);
-    Console.Write($"Enemy Health: {enemy.Health}");
+    
+    for (int i = 0; i < enemies.Count; i++)
+    {
+        Console.SetCursorPosition(15, height + (i+1));
+        Console.Write($"Enemy {i+1} Health: {enemies[i].Health}");
+    }
 }
 
 // Sword Animations
@@ -136,21 +143,37 @@ static bool boundaryCheck(int width, int height, int player_x, int player_y)
     }
 }
 
+bool IsOccupiedByEnemy(int x, int y, List<Enemy> enemies)
+{
+    foreach (Enemy enemy in enemies)
+    {
+        if (enemy.IsAlive)
+        {
+            if (x == enemy.X && y == enemy.Y)
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 // Controls player movement within the game console
-(int x, int y, Direction playerFaces) updatePlayerPosition(int x, int y, ConsoleKey input, Direction playerFaces, Enemy enemy)
+(int x, int y, Direction playerFaces) updatePlayerPosition(int x, int y, ConsoleKey input, Direction playerFaces, List<Enemy> enemies)
 {
     if (input == ConsoleKey.RightArrow)
     {
-        bool blockedByEnemy = enemy.IsAlive && x + 1 == enemy.X && y == enemy.Y;
-        if (!blockedByEnemy)
+        bool blockedByEnemy = IsOccupiedByEnemy(x + 1, y, enemies);
+        if (!blockedByEnemy) //Checks if player X,Y position is blocked by an enemy
         {
+            //Checks to see if movement is impeded by wall boundary
             x = boundaryCheck(width, height, (x + 1), y) ? (x + 1) : x;
         }
         playerFaces = Direction.East;
     }
     if (input == ConsoleKey.LeftArrow)
     {
-        bool blockedByEnemy = enemy.IsAlive && x - 1 == enemy.X && y == enemy.Y;
+        bool blockedByEnemy = IsOccupiedByEnemy(x - 1, y, enemies);
         if (!blockedByEnemy)
         {
             x = boundaryCheck(width, height, (x - 1), y) ? (x - 1) : x;
@@ -159,7 +182,7 @@ static bool boundaryCheck(int width, int height, int player_x, int player_y)
     }
     if (input == ConsoleKey.DownArrow)
     {
-        bool blockedByEnemy = enemy.IsAlive && x == enemy.X && y + 1 == enemy.Y;
+        bool blockedByEnemy = IsOccupiedByEnemy(x, y + 1, enemies);
         if (!blockedByEnemy)
         {
             y = boundaryCheck(width, height, x, (y + 1)) ? (y + 1) : y;
@@ -168,7 +191,7 @@ static bool boundaryCheck(int width, int height, int player_x, int player_y)
     }
     if (input == ConsoleKey.UpArrow)
     {
-        bool blockedByEnemy = enemy.IsAlive && x == enemy.X && y - 1 == enemy.Y;
+        bool blockedByEnemy = IsOccupiedByEnemy(x, y - 1, enemies);
         if (!blockedByEnemy)
         {
             y = boundaryCheck(width, height, x, (y - 1)) ? (y - 1) : y;
@@ -191,7 +214,7 @@ void main(int player_x, int player_y, int width, int height)
     bool isAttacking = false;
 
     // Enemy
-    Enemy enemy = new Enemy(18, 3, 3);
+    List<Enemy> enemies = new List<Enemy> { new Enemy(18, 3, 3), new Enemy(4, 3, 4) };
 
     //Game loop internal clock
     Stopwatch timeElapsed = Stopwatch.StartNew();
@@ -200,7 +223,7 @@ void main(int player_x, int player_y, int width, int height)
     long attackStartedAt = -attackCooldownMs; //Start of player attack
     long attackElapsedMs = 0L; //Elapsed time since start of player attack
 
-    drawGame(player_x, player_y, playerFaces, isAttacking, attackElapsedMs, enemy);
+    drawGame(player_x, player_y, playerFaces, isAttacking, attackElapsedMs, enemies);
 
     while (true)
     {
@@ -241,9 +264,12 @@ void main(int player_x, int player_y, int width, int height)
                     targetX--;
                 }
 
-                if (targetX == enemy.X && targetY == enemy.Y && enemy.IsAlive)
+                foreach (Enemy enemy in enemies)
                 {
-                    enemy.TakeDamage(1);
+                    if (targetX == enemy.X && targetY == enemy.Y && enemy.IsAlive)
+                    {
+                        enemy.TakeDamage(1);
+                    }
                 }
             }
 
@@ -255,13 +281,13 @@ void main(int player_x, int player_y, int width, int height)
                 break;
             }
 
-            (player_x, player_y, playerFaces) = updatePlayerPosition(player_x, player_y, input, playerFaces, enemy);
+            (player_x, player_y, playerFaces) = updatePlayerPosition(player_x, player_y, input, playerFaces, enemies);
         }
 
         if (timeElapsed.ElapsedMilliseconds - timeLastUpdated >= drawIntervalMs)
         {
             attackElapsedMs = timeElapsed.ElapsedMilliseconds - attackStartedAt;
-            drawGame(player_x, player_y, playerFaces, isAttacking, attackElapsedMs, enemy);
+            drawGame(player_x, player_y, playerFaces, isAttacking, attackElapsedMs, enemies);
             timeLastUpdated = timeElapsed.ElapsedMilliseconds;
         }
         Thread.Sleep(1);
