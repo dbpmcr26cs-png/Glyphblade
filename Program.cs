@@ -201,7 +201,26 @@ bool IsOccupiedByEnemy(int x, int y, List<Enemy> enemies)
     return (x, y, playerFaces);
 }
 
-// void UpdateEnemyPatrols(List<Enemy>, int playerX, int playerY, long currentTimeMs){}
+void UpdateEnemyPatrols(List<Enemy> enemies, int playerX, int playerY, long currentTimeMs)
+{
+    foreach (Enemy enemy in enemies)
+    {
+        if (enemy.IsAlive &&
+            (currentTimeMs - enemy.LastMovedAt >= EnemyMoveIntervalMs))
+        {
+            int nextX = enemy.X + enemy.PatrolStepX;
+            if (BoundaryCheck(nextX, enemy.Y) && !(nextX == playerX && enemy.Y == playerY) && !IsOccupiedByEnemy(nextX, enemy.Y, enemies))
+            {
+                enemy.X = nextX;
+            }
+            else
+            {
+                enemy.PatrolStepX *= -1;
+            }
+            enemy.LastMovedAt = currentTimeMs;
+        }
+    }
+}
 
 // Main Game Loop
 void Main(int playerX, int playerY)
@@ -236,23 +255,7 @@ void Main(int playerX, int playerY)
         }
 
         // Each enemy patrols back and forth across the room
-        foreach (Enemy enemy in enemies)
-        {
-            if (enemy.IsAlive &&
-                (timeElapsed.ElapsedMilliseconds - enemy.LastMovedAt >= EnemyMoveIntervalMs))
-            {
-                int nextX = enemy.X + enemy.PatrolStepX;
-                if (BoundaryCheck(nextX, enemy.Y) && !(nextX == playerX && enemy.Y == playerY) && !IsOccupiedByEnemy(nextX, enemy.Y, enemies))
-                {
-                    enemy.X = nextX;
-                }
-                else
-                {
-                    enemy.PatrolStepX *= -1;
-                }
-                enemy.LastMovedAt = timeElapsed.ElapsedMilliseconds;
-            }
-        }
+        UpdateEnemyPatrols(enemies, playerX, playerY, timeElapsed.ElapsedMilliseconds);
 
         if (Console.KeyAvailable)
         {
