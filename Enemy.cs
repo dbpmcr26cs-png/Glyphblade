@@ -4,6 +4,7 @@ public class Enemy
     public int Y { get; set; }
     public int Health { get; private set; }
     public long LastMovedAt { get; set; } = 0L;
+    public long LastAttackedAt { get; set; } = 0L;
     public int PatrolStepX { get; set; } = 1;
     // public int PatrolStepY { get; set; } = 1;
     public EnemyState State { get; set; } = EnemyState.Patrolling;

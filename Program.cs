@@ -15,12 +15,13 @@ const long AttackDurationMs = 200L; //Sword Attack
 const long SwordFrameDurationMs = AttackDurationMs / 2; //Duration of first half of sword attack animation
 const long AttackCooldownMs = 400L; //Cooldown between sword attacks
 const long EnemyMoveIntervalMs = 500L; //Time between enemy patrolling moves
+const long EnemyAttackCooldownMs = 1000L;
 
 // Enemy Behavior
 const int EnemyDetectionRange = 5;
 
 // Clears screen then draws boundaries and draws player
-void DrawGame(int x, int y, Direction playerFaces, bool isAttacking, long attackElapsedMs, List<Enemy> enemies)
+void DrawGame(int x, int y, Direction playerFaces, bool isAttacking, long attackElapsedMs, List<Enemy> enemies, Player player)
 {
     Console.Clear();
     DrawWallBoundaries();
@@ -48,6 +49,10 @@ void DrawGame(int x, int y, Direction playerFaces, bool isAttacking, long attack
         Console.SetCursorPosition(15, Height + (i + 1));
         Console.Write($"Enemy {i + 1} Health: {enemies[i].Health}");
     }
+
+    //Write player health for testing
+    Console.SetCursorPosition(15, Height + 3);
+    Console.WriteLine($"Player Health: {player.Health}");
 }
 
 // Sword Animations
@@ -239,6 +244,20 @@ void UpdateEnemyChasing(List<Enemy> enemies, int playerX, int playerY, long curr
     }
 }
 
+void UpdateEnemyAttacking(List<Enemy> enemies, Player player, long currentTimeMs)
+{
+    foreach (Enemy enemy in enemies)
+    {
+        if (enemy.IsAlive && enemy.State == EnemyState.Attacking &&
+            (ManhattanDistance(enemy.X, enemy.Y, player.X, player.Y) == 1) &&
+            (currentTimeMs - enemy.LastAttackedAt >= EnemyAttackCooldownMs))
+        {
+            player.TakeDamage(1);
+            enemy.LastAttackedAt = currentTimeMs;
+        }
+    }
+}
+
 int ManhattanDistance(int x1, int y1, int x2, int y2)
 {
     return Math.Abs(x1 - x2) + Math.Abs(y1 - y2);
@@ -305,7 +324,11 @@ void UpdateEnemyStates(int playerX, int playerY, List<Enemy> enemies)
         if (enemy.IsAlive)
         {
             int distance = ManhattanDistance(playerX, playerY, enemy.X, enemy.Y);
-            if (distance <= EnemyDetectionRange)
+            if (distance == 1)
+            {
+                enemy.State = EnemyState.Attacking;
+            }
+            else if (distance <= EnemyDetectionRange)
             {
                 enemy.State = EnemyState.Chasing;
             }
@@ -342,9 +365,9 @@ void Main()
     long attackStartedAt = -AttackCooldownMs; //Start of player attack
     long attackElapsedMs = 0L; //Elapsed time since start of player attack
 
-    DrawGame(player.X, player.Y, playerFaces, isAttacking, attackElapsedMs, enemies);
+    DrawGame(player.X, player.Y, playerFaces, isAttacking, attackElapsedMs, enemies, player);
 
-    while (true)
+    while (player.IsAlive)
     {
         if (isAttacking == true &&
             (timeElapsed.ElapsedMilliseconds - attackStartedAt >= AttackDurationMs))
@@ -356,6 +379,11 @@ void Main()
         UpdateEnemyStates(player.X, player.Y, enemies);
         UpdateEnemyPatrols(enemies, player.X, player.Y, timeElapsed.ElapsedMilliseconds);
         UpdateEnemyChasing(enemies, player.X, player.Y, timeElapsed.ElapsedMilliseconds);
+        UpdateEnemyAttacking(enemies, player, timeElapsed.ElapsedMilliseconds);
+        if (!player.IsAlive)
+        {
+            break;
+        }
 
         if (Console.KeyAvailable)
         {
@@ -411,11 +439,26 @@ void Main()
         if (timeElapsed.ElapsedMilliseconds - timeLastUpdated >= DrawIntervalMs)
         {
             attackElapsedMs = timeElapsed.ElapsedMilliseconds - attackStartedAt;
-            DrawGame(player.X, player.Y, playerFaces, isAttacking, attackElapsedMs, enemies);
+            DrawGame(player.X, player.Y, playerFaces, isAttacking, attackElapsedMs, enemies, player);
             timeLastUpdated = timeElapsed.ElapsedMilliseconds;
         }
         Thread.Sleep(1);
     }
+    // GAME OVER!
+    if (!player.IsAlive)
+    {
+        Console.Clear();
+        Console.SetCursorPosition(15, 6);
+        Console.WriteLine("Game Over!");
+        Thread.Sleep(1500);
+        while (Console.KeyAvailable) //While loop discards pending key presses
+        {
+            Console.ReadKey(true);
+        }
+        Console.ReadKey(true);
+    }
+    Console.Clear();
+    Console.CursorVisible = true;
 }
 
 Main();
