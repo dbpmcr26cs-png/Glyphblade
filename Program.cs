@@ -225,6 +225,24 @@ void UpdateEnemyPatrols(List<Enemy> enemies, int playerX, int playerY, long curr
     }
 }
 
+void UpdateEnemyChasing(List<Enemy> enemies, int playerX, int playerY, long currentTimeMs)
+{
+    foreach (Enemy enemy in enemies)
+    {
+        if (enemy.IsAlive && enemy.State == EnemyState.Chasing &&
+            (currentTimeMs - enemy.LastMovedAt >= EnemyMoveIntervalMs))
+        {
+            (int, int) nextStep = FindNextStep(enemy.X, enemy.Y, playerX, playerY);
+
+            if (nextStep != (playerX, playerY) && !IsOccupiedByEnemy(nextStep.Item1, nextStep.Item2, enemies))
+            {
+                (enemy.X, enemy.Y) = nextStep; //Update enemy coord;
+            }
+            enemy.LastMovedAt = currentTimeMs;
+        }
+    }
+}
+
 int ManhattanDistance(int x1, int y1, int x2, int y2)
 {
     return Math.Abs(x1 - x2) + Math.Abs(y1 - y2);
@@ -250,7 +268,7 @@ int ManhattanDistance(int x1, int y1, int x2, int y2)
     while (q.Count > 0)
     {
         (int, int) curr = q.Dequeue();
-        
+
         if (curr == (targetX, targetY))
         {
             //Trace back path
@@ -338,6 +356,7 @@ void Main(int playerX, int playerY)
         // Each enemy patrols back and forth across the room
         UpdateEnemyStates(playerX, playerY, enemies);
         UpdateEnemyPatrols(enemies, playerX, playerY, timeElapsed.ElapsedMilliseconds);
+        UpdateEnemyChasing(enemies, playerX, playerY, timeElapsed.ElapsedMilliseconds);
 
         if (Console.KeyAvailable)
         {
