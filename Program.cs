@@ -232,7 +232,7 @@ void UpdateEnemyChasing(List<Enemy> enemies, int playerX, int playerY, long curr
         if (enemy.IsAlive && enemy.State == EnemyState.Chasing &&
             (currentTimeMs - enemy.LastMovedAt >= EnemyMoveIntervalMs))
         {
-            (int, int) nextStep = FindNextStep(enemy.X, enemy.Y, playerX, playerY);
+            (int, int) nextStep = FindNextStep(enemy.X, enemy.Y, playerX, playerY, enemies);
 
             if (nextStep != (playerX, playerY) && !IsOccupiedByEnemy(nextStep.Item1, nextStep.Item2, enemies))
             {
@@ -248,7 +248,7 @@ int ManhattanDistance(int x1, int y1, int x2, int y2)
     return Math.Abs(x1 - x2) + Math.Abs(y1 - y2);
 }
 
-(int x, int y) FindNextStep(int startX, int startY, int targetX, int targetY)
+(int x, int y) FindNextStep(int startX, int startY, int targetX, int targetY, List<Enemy> enemies)
 {
     // Return start coord if they match target coord
     if ((startX, startY) == (targetX, targetY))
@@ -291,7 +291,7 @@ int ManhattanDistance(int x1, int y1, int x2, int y2)
 
         foreach ((int, int) neighbor in neighbors)
         {
-            if (!visited.Contains(neighbor) && BoundaryCheck(neighbor.Item1, neighbor.Item2))
+            if (!visited.Contains(neighbor) && !IsOccupiedByEnemy(neighbor.Item1, neighbor.Item2, enemies) && BoundaryCheck(neighbor.Item1, neighbor.Item2))
             {
                 visited.Add(neighbor); //Add neighbor to hashset
                 cameFrom[neighbor] = curr; //Original coord (curr) is V, for 'Neighbor' Key (tells how we got here)
