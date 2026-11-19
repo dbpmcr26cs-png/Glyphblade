@@ -19,10 +19,6 @@ const long EnemyMoveIntervalMs = 500L; //Time between enemy patrolling moves
 // Enemy Behavior
 const int EnemyDetectionRange = 5;
 
-// Player starting position - better to write as class aprams (player.x, player.y) i think
-int playerX = 11;
-int playerY = 6;
-
 // Clears screen then draws boundaries and draws player
 void DrawGame(int x, int y, Direction playerFaces, bool isAttacking, long attackElapsedMs, List<Enemy> enemies)
 {
@@ -322,7 +318,7 @@ void UpdateEnemyStates(int playerX, int playerY, List<Enemy> enemies)
 }
 
 // Main Game Loop
-void Main(int playerX, int playerY)
+void Main()
 {
     // Hides flashing cursor during gameplay
     Console.CursorVisible = false;
@@ -332,6 +328,9 @@ void Main(int playerX, int playerY)
 
     // Is player currently attacking - for sword effect and damage
     bool isAttacking = false;
+
+    //Player
+    Player player = new Player(11, 6, 5);
 
     // Enemy
     List<Enemy> enemies = new List<Enemy> { new Enemy(18, 3, 3), new Enemy(4, 3, 4) };
@@ -343,7 +342,7 @@ void Main(int playerX, int playerY)
     long attackStartedAt = -AttackCooldownMs; //Start of player attack
     long attackElapsedMs = 0L; //Elapsed time since start of player attack
 
-    DrawGame(playerX, playerY, playerFaces, isAttacking, attackElapsedMs, enemies);
+    DrawGame(player.X, player.Y, playerFaces, isAttacking, attackElapsedMs, enemies);
 
     while (true)
     {
@@ -354,9 +353,9 @@ void Main(int playerX, int playerY)
         }
 
         // Each enemy patrols back and forth across the room
-        UpdateEnemyStates(playerX, playerY, enemies);
-        UpdateEnemyPatrols(enemies, playerX, playerY, timeElapsed.ElapsedMilliseconds);
-        UpdateEnemyChasing(enemies, playerX, playerY, timeElapsed.ElapsedMilliseconds);
+        UpdateEnemyStates(player.X, player.Y, enemies);
+        UpdateEnemyPatrols(enemies, player.X, player.Y, timeElapsed.ElapsedMilliseconds);
+        UpdateEnemyChasing(enemies, player.X, player.Y, timeElapsed.ElapsedMilliseconds);
 
         if (Console.KeyAvailable)
         {
@@ -370,8 +369,8 @@ void Main(int playerX, int playerY)
                 isAttacking = true;
                 attackStartedAt = timeElapsed.ElapsedMilliseconds;
 
-                int targetX = playerX;
-                int targetY = playerY;
+                int targetX = player.X;
+                int targetY = player.Y;
                 if (playerFaces == Direction.North)
                 {
                     targetY--;
@@ -406,20 +405,20 @@ void Main(int playerX, int playerY)
                 break;
             }
 
-            (playerX, playerY, playerFaces) = UpdatePlayerPosition(playerX, playerY, input, playerFaces, enemies);
+            (player.X, player.Y, playerFaces) = UpdatePlayerPosition(player.X, player.Y, input, playerFaces, enemies);
         }
 
         if (timeElapsed.ElapsedMilliseconds - timeLastUpdated >= DrawIntervalMs)
         {
             attackElapsedMs = timeElapsed.ElapsedMilliseconds - attackStartedAt;
-            DrawGame(playerX, playerY, playerFaces, isAttacking, attackElapsedMs, enemies);
+            DrawGame(player.X, player.Y, playerFaces, isAttacking, attackElapsedMs, enemies);
             timeLastUpdated = timeElapsed.ElapsedMilliseconds;
         }
         Thread.Sleep(1);
     }
 }
 
-Main(playerX, playerY);
+Main();
 
 enum Direction
 {
