@@ -4,6 +4,11 @@
 const int Width = 23; //20
 const int Height = 13; //12
 
+const int HorizScale = 2; //This controls horizontal movement scaling (corrects horiz if 2)
+// 2 gives each tile two terminal columns.
+// 1 gives each tile one terminal column.
+
+
 // Timed Events
 const long DrawIntervalMs = 100L; //Screen redraw rate
 const long AttackDurationMs = 200L; //Sword Attack
@@ -11,10 +16,8 @@ const long SwordFrameDurationMs = AttackDurationMs / 2; //Duration of first half
 const long AttackCooldownMs = 400L; //Cooldown between sword attacks
 const long EnemyMoveIntervalMs = 500L; //Time between enemy patrolling moves
 
-const int HorizScale = 2; //This controls horizontal movement scaling (corrects horiz if 2)
-// 2 gives each tile two terminal columns.
-// 1 gives each tile one terminal column.
-
+// Enemy Behavior
+const int EnemyDetectionRange = 5;
 
 // Player starting position - better to write as class aprams (player.x, player.y) i think
 int playerX = 11;
@@ -205,7 +208,7 @@ void UpdateEnemyPatrols(List<Enemy> enemies, int playerX, int playerY, long curr
 {
     foreach (Enemy enemy in enemies)
     {
-        if (enemy.IsAlive &&
+        if (enemy.IsAlive && enemy.State == EnemyState.Patrolling &&
             (currentTimeMs - enemy.LastMovedAt >= EnemyMoveIntervalMs))
         {
             int nextX = enemy.X + enemy.PatrolStepX;
@@ -218,6 +221,84 @@ void UpdateEnemyPatrols(List<Enemy> enemies, int playerX, int playerY, long curr
                 enemy.PatrolStepX *= -1;
             }
             enemy.LastMovedAt = currentTimeMs;
+        }
+    }
+}
+
+int ManhattanDistance(int x1, int y1, int x2, int y2)
+{
+    return Math.Abs(x1 - x2) + Math.Abs(y1 - y2);
+}
+
+(int x, int y) FindNextStep(int startX, int startY, int targetX, int targetY)
+{
+    // Return start coord if they match target coord
+    if ((startX, startY) == (targetX, targetY))
+    {
+        return (startX, startY);
+    }
+
+    Queue<(int x, int y)> q = new Queue<(int x, int y)>();
+    q.Enqueue((startX, startY));
+
+    HashSet<(int x, int y)> visited = new HashSet<(int x, int y)>();
+    visited.Add((startX, startY));
+
+    // Contains all linked visited nodes as k,v
+    Dictionary<(int x, int y), (int x, int y)> cameFrom = new();
+
+    while (q.Count > 0)
+    {
+        (int, int) curr = q.Dequeue();
+        
+        if (curr == (targetX, targetY))
+        {
+            //Trace back path
+            (int x, int y) step = curr;
+            while (cameFrom[step] != (startX, startY))
+            {
+                step = cameFrom[step];
+            }
+            return step; //Return first step in path (after start coord)
+        }
+
+        //List neighbor coordinates
+        (int, int)[] neighbors =
+        {
+            (curr.Item1, curr.Item2 - 1), //North
+            (curr.Item1, curr.Item2 + 1), //South
+            (curr.Item1 + 1, curr.Item2), //East
+            (curr.Item1 - 1, curr.Item2), //West
+        };
+
+        foreach ((int, int) neighbor in neighbors)
+        {
+            if (!visited.Contains(neighbor) && BoundaryCheck(neighbor.Item1, neighbor.Item2))
+            {
+                visited.Add(neighbor); //Add neighbor to hashset
+                cameFrom[neighbor] = curr; //Original coord (curr) is V, for 'Neighbor' Key (tells how we got here)
+                q.Enqueue(neighbor); //Add to queue for loop
+            }
+        }
+    }
+    return (startX, startY); //Return start coord if target isn't found
+}
+
+void UpdateEnemyStates(int playerX, int playerY, List<Enemy> enemies)
+{
+    foreach (Enemy enemy in enemies)
+    {
+        if (enemy.IsAlive)
+        {
+            int distance = ManhattanDistance(playerX, playerY, enemy.X, enemy.Y);
+            if (distance <= EnemyDetectionRange)
+            {
+                enemy.State = EnemyState.Chasing;
+            }
+            else
+            {
+                enemy.State = EnemyState.Patrolling;
+            }
         }
     }
 }
@@ -255,6 +336,7 @@ void Main(int playerX, int playerY)
         }
 
         // Each enemy patrols back and forth across the room
+        UpdateEnemyStates(playerX, playerY, enemies);
         UpdateEnemyPatrols(enemies, playerX, playerY, timeElapsed.ElapsedMilliseconds);
 
         if (Console.KeyAvailable)
