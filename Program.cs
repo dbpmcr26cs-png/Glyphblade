@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 // Game window boundaries - 24x14
 const int Width = 23; //20
@@ -10,28 +11,45 @@ const int HorizScale = 2; //This controls horizontal movement scaling (corrects 
 
 
 // Timed Events
-const long DrawIntervalMs = 100L; //Screen redraw rate
+const long DrawIntervalMs = 33L; //Screen redraw rate
 const long AttackDurationMs = 200L; //Sword Attack
 const long SwordFrameDurationMs = AttackDurationMs / 2; //Duration of first half of sword attack animation
 const long AttackCooldownMs = 400L; //Cooldown between sword attacks
 const long EnemyMoveIntervalMs = 500L; //Time between enemy patrolling moves
-const long EnemyAttackCooldownMs = 1000L;
+const long EnemyAttackCooldownMs = 1000L; //Time between enemy attacks
+const long EnemyWindUpDurationMs = 500L; //Time from start of attack to actual effect (allows player time to dodge)
+const long EnemyFlashIntervalMs = 100L; //Flashes enemy (hides) while they are preparing attack (wind-up)
 
 // Enemy Behavior
 const int EnemyDetectionRange = 5;
 
 // Clears screen then draws boundaries and draws player
-void DrawGame(int x, int y, Direction playerFaces, bool isAttacking, long attackElapsedMs, List<Enemy> enemies, Player player)
+void DrawGame(int x, int y, Direction playerFaces, bool isAttacking, long currentTimeMs, long attackElapsedMs, List<Enemy> enemies, Player player)
 {
     Console.Clear();
+    Console.ResetColor();
     DrawWallBoundaries();
 
     foreach (Enemy enemy in enemies)
     {
-        if (enemy.IsAlive)
+        long windUpElapsedMs = currentTimeMs - enemy.AttackStartedAt;
+
+        //Makes enemy flash twice, 0-99Ms and 200-299Ms after attack starts
+        bool hiddenDuringWindUp = enemy.IsWindingUp &&
+            (windUpElapsedMs < EnemyFlashIntervalMs ||
+            (windUpElapsedMs >= EnemyFlashIntervalMs * 2 &&
+            windUpElapsedMs < EnemyFlashIntervalMs * 3));
+
+        if (enemy.IsAlive && !hiddenDuringWindUp)
         {
             Console.SetCursorPosition(enemy.X * HorizScale, enemy.Y);
+            if (enemy.IsWindingUp)
+            {
+                //Attack Warning Color
+                Console.ForegroundColor = ConsoleColor.Red;
+            }
             Console.Write("&");
+            Console.ResetColor();
         }
     }
 
@@ -209,7 +227,7 @@ void UpdateEnemyPatrols(List<Enemy> enemies, int playerX, int playerY, long curr
 {
     foreach (Enemy enemy in enemies)
     {
-        if (enemy.IsAlive && enemy.State == EnemyState.Patrolling &&
+        if (enemy.IsAlive && enemy.State == EnemyState.Patrolling && !enemy.IsWindingUp &&
             (currentTimeMs - enemy.LastMovedAt >= EnemyMoveIntervalMs))
         {
             int nextX = enemy.X + enemy.PatrolStepX;
@@ -230,7 +248,7 @@ void UpdateEnemyChasing(List<Enemy> enemies, int playerX, int playerY, long curr
 {
     foreach (Enemy enemy in enemies)
     {
-        if (enemy.IsAlive && enemy.State == EnemyState.Chasing &&
+        if (enemy.IsAlive && enemy.State == EnemyState.Chasing && !enemy.IsWindingUp &&
             (currentTimeMs - enemy.LastMovedAt >= EnemyMoveIntervalMs))
         {
             (int, int) nextStep = FindNextStep(enemy.X, enemy.Y, playerX, playerY, enemies);
@@ -248,12 +266,24 @@ void UpdateEnemyAttacking(List<Enemy> enemies, Player player, long currentTimeMs
 {
     foreach (Enemy enemy in enemies)
     {
-        if (enemy.IsAlive && enemy.State == EnemyState.Attacking &&
-            (ManhattanDistance(enemy.X, enemy.Y, player.X, player.Y) == 1) &&
+        //Enemy Attack (Wind-Up Begins)
+        if (enemy.IsAlive && enemy.State == EnemyState.Attacking && !(enemy.IsWindingUp) &&
             (currentTimeMs - enemy.LastAttackedAt >= EnemyAttackCooldownMs))
         {
-            player.TakeDamage(1);
+            enemy.IsWindingUp = true;
+            enemy.AttackTargetX = player.X;
+            enemy.AttackTargetY = player.Y;
+            enemy.AttackStartedAt = currentTimeMs;
             enemy.LastAttackedAt = currentTimeMs;
+        }
+        //Wind-Up Finishes & Attack Starts
+        else if (enemy.IsAlive && (enemy.IsWindingUp) && (currentTimeMs - enemy.AttackStartedAt >= EnemyWindUpDurationMs))
+        {
+            if (ManhattanDistance(enemy.AttackTargetX, enemy.AttackTargetY, player.X, player.Y) == 0)
+            {
+                player.TakeDamage(1);
+            }
+            enemy.IsWindingUp = false;
         }
     }
 }
@@ -365,7 +395,7 @@ void Main()
     long attackStartedAt = -AttackCooldownMs; //Start of player attack
     long attackElapsedMs = 0L; //Elapsed time since start of player attack
 
-    DrawGame(player.X, player.Y, playerFaces, isAttacking, attackElapsedMs, enemies, player);
+    DrawGame(player.X, player.Y, playerFaces, isAttacking, timeElapsed.ElapsedMilliseconds, attackElapsedMs, enemies, player);
 
     while (player.IsAlive)
     {
@@ -439,7 +469,7 @@ void Main()
         if (timeElapsed.ElapsedMilliseconds - timeLastUpdated >= DrawIntervalMs)
         {
             attackElapsedMs = timeElapsed.ElapsedMilliseconds - attackStartedAt;
-            DrawGame(player.X, player.Y, playerFaces, isAttacking, attackElapsedMs, enemies, player);
+            DrawGame(player.X, player.Y, playerFaces, isAttacking, timeElapsed.ElapsedMilliseconds, attackElapsedMs, enemies, player);
             timeLastUpdated = timeElapsed.ElapsedMilliseconds;
         }
         Thread.Sleep(1);
