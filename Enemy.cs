@@ -1,3 +1,5 @@
+using System.Dynamic;
+
 public class Enemy
 {
     public int X { get; set; }
@@ -16,6 +18,7 @@ public class Enemy
     // public long StrikeFlashUntil { get; set; } = 0L;
 
     public EnemyState State { get; set; } = EnemyState.Patrolling;
+    public Direction Facing { get; set; } = Direction.South;
 
     public Enemy(int x, int y, int health)
     {

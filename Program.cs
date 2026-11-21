@@ -233,12 +233,16 @@ void UpdateEnemyPatrols(List<Enemy> enemies, int playerX, int playerY, long curr
             int nextX = enemy.X + enemy.PatrolStepX;
             if (BoundaryCheck(nextX, enemy.Y) && !(nextX == playerX && enemy.Y == playerY) && !IsOccupiedByEnemy(nextX, enemy.Y, enemies))
             {
+                //If no obstacle, continue patrolling in direction
                 enemy.X = nextX;
             }
             else
             {
+                //If obstable, change direction
                 enemy.PatrolStepX *= -1;
             }
+            //Change direction enemy is facing to match patroling
+            enemy.Facing = (enemy.PatrolStepX > 0) ? Direction.East : Direction.West;
             enemy.LastMovedAt = currentTimeMs;
         }
     }
@@ -251,10 +255,22 @@ void UpdateEnemyChasing(List<Enemy> enemies, int playerX, int playerY, long curr
         if (enemy.IsAlive && enemy.State == EnemyState.Chasing && !enemy.IsWindingUp &&
             (currentTimeMs - enemy.LastMovedAt >= EnemyMoveIntervalMs))
         {
+            //BFS from enemy to player to identify best next move (chasing)
             (int, int) nextStep = FindNextStep(enemy.X, enemy.Y, playerX, playerY, enemies);
 
             if (nextStep != (playerX, playerY) && !IsOccupiedByEnemy(nextStep.Item1, nextStep.Item2, enemies))
             {
+                //Update enemy facing direction
+                if (nextStep.Item1 > enemy.X)
+                    { enemy.Facing = Direction.East; }
+                else if (nextStep.Item1 < enemy.X)
+                    { enemy.Facing = Direction.West; }
+                else if (nextStep.Item2 > enemy.Y)
+                    { enemy.Facing = Direction.South; }
+                else if (nextStep.Item2 < enemy.Y)
+                    { enemy.Facing = Direction.North; }
+
+                //Update enemy coord position on map
                 (enemy.X, enemy.Y) = nextStep; //Update enemy coord;
             }
             enemy.LastMovedAt = currentTimeMs;
@@ -273,6 +289,17 @@ void UpdateEnemyAttacking(List<Enemy> enemies, Player player, long currentTimeMs
             enemy.IsWindingUp = true;
             enemy.AttackTargetX = player.X;
             enemy.AttackTargetY = player.Y;
+
+            //Update enemy facing direction
+            if (enemy.AttackTargetX > enemy.X)
+                { enemy.Facing = Direction.East; }
+            else if (enemy.AttackTargetX < enemy.X)
+                { enemy.Facing = Direction.West; }
+            else if (enemy.AttackTargetY > enemy.Y)
+                { enemy.Facing = Direction.South; }
+            else if (enemy.AttackTargetY < enemy.Y)
+                { enemy.Facing = Direction.North; }
+
             enemy.AttackStartedAt = currentTimeMs;
             enemy.LastAttackedAt = currentTimeMs;
         }
@@ -493,7 +520,7 @@ void Main()
 
 Main();
 
-enum Direction
+public enum Direction
 {
     North,
     South,
