@@ -49,6 +49,7 @@ void DrawGame(int x, int y, Direction playerFaces, bool isAttacking, long curren
                 Console.ForegroundColor = ConsoleColor.Red;
             }
             Console.Write("&");
+            DrawCarriedSword(enemy.X, enemy.Y, enemy.Facing, player, enemies);
             Console.ResetColor();
         }
     }
@@ -59,6 +60,11 @@ void DrawGame(int x, int y, Direction playerFaces, bool isAttacking, long curren
     {
         DrawSword(playerFaces, x, y, attackElapsedMs);
     }
+    else
+    {
+        DrawCarriedSword(x, y, playerFaces, player, enemies);
+    }
+
     Console.SetCursorPosition(4, Height + 1);
     Console.Write($"{playerFaces}");
 
@@ -130,6 +136,53 @@ void DrawSword(Direction playerFaces, int x, int y, long attackElapsedMs)
     }
 }
 
+void DrawCarriedSword(int charX, int charY, Direction facing, Player player, List<Enemy> enemies)
+{
+    int tarX = charX;
+    int tarY = charY;
+
+    if (facing == Direction.North)
+    {
+        tarY = charY - 1;
+    }
+    else if (facing == Direction.South)
+    {
+        tarY = charY + 1;
+    }
+    else if (facing == Direction.East)
+    {
+        tarX = charX + 1;
+    }
+    else if (facing == Direction.West)
+    {
+        tarX = charX - 1;
+    }
+    
+    if (BoundaryCheck(tarX, tarY) && !IsOccupiedByEnemy(tarX, tarY, enemies) && !(player.X == tarX && player.Y == tarY))
+    {
+        charX *= HorizScale;
+        Console.SetCursorPosition(charX, tarY);
+        if (facing == Direction.North)
+        {
+            Console.Write("╷");
+        }
+        else if (facing == Direction.South)
+        {
+            Console.Write("╵");
+        }
+        else if (facing == Direction.East)
+        {
+            Console.SetCursorPosition(charX + 1, tarY);
+            Console.Write("-");
+        }
+        else if (facing == Direction.West)
+        {
+            Console.SetCursorPosition(charX - 1, tarY);
+            Console.Write("-");
+        }
+    }
+}
+
 // Draw walls for room bounday
 //  - eventually will need to create doors for player to go through
 void DrawWallBoundaries()
@@ -155,6 +208,7 @@ void DrawWallBoundaries()
 // - DOWN THE LINE CHECK OBSTABLES IN GAME
 static bool BoundaryCheck(int playerX, int playerY)
 {
+    //Return false if out-of-bounds, else true
     if (playerY >= Height || playerY <= 0 || playerX >= Width || playerX <= 0)
     {
         return false;
@@ -167,6 +221,7 @@ static bool BoundaryCheck(int playerX, int playerY)
 
 bool IsOccupiedByEnemy(int x, int y, List<Enemy> enemies)
 {
+    //Return True if occupied by enemy, else false
     foreach (Enemy enemy in enemies)
     {
         if (enemy.IsAlive)
@@ -262,13 +317,13 @@ void UpdateEnemyChasing(List<Enemy> enemies, int playerX, int playerY, long curr
             {
                 //Update enemy facing direction
                 if (nextStep.Item1 > enemy.X)
-                    { enemy.Facing = Direction.East; }
+                { enemy.Facing = Direction.East; }
                 else if (nextStep.Item1 < enemy.X)
-                    { enemy.Facing = Direction.West; }
+                { enemy.Facing = Direction.West; }
                 else if (nextStep.Item2 > enemy.Y)
-                    { enemy.Facing = Direction.South; }
+                { enemy.Facing = Direction.South; }
                 else if (nextStep.Item2 < enemy.Y)
-                    { enemy.Facing = Direction.North; }
+                { enemy.Facing = Direction.North; }
 
                 //Update enemy coord position on map
                 (enemy.X, enemy.Y) = nextStep; //Update enemy coord;
@@ -292,13 +347,13 @@ void UpdateEnemyAttacking(List<Enemy> enemies, Player player, long currentTimeMs
 
             //Update enemy facing direction
             if (enemy.AttackTargetX > enemy.X)
-                { enemy.Facing = Direction.East; }
+            { enemy.Facing = Direction.East; }
             else if (enemy.AttackTargetX < enemy.X)
-                { enemy.Facing = Direction.West; }
+            { enemy.Facing = Direction.West; }
             else if (enemy.AttackTargetY > enemy.Y)
-                { enemy.Facing = Direction.South; }
+            { enemy.Facing = Direction.South; }
             else if (enemy.AttackTargetY < enemy.Y)
-                { enemy.Facing = Direction.North; }
+            { enemy.Facing = Direction.North; }
 
             enemy.AttackStartedAt = currentTimeMs;
             enemy.LastAttackedAt = currentTimeMs;
